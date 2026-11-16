@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Planejamentos de Aula</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-10 px-6 gap-8">
+
+    <!-- Bloco 1: Formulário de Registro -->
+    <div class="bg-white w-full max-w-5xl p-8 rounded-lg shadow-sm border border-gray-200">
+        <h2 class="text-xl font-semibold text-gray-800 border-b border-gray-100 pb-4 mb-6">Salvar Planejamento de Aula</h2>
+        
+        <form id="formPlanejamento" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm text-gray-700 mb-1">Assunto da Aula</label>
+                    <input type="text" id="assunto" placeholder="Ex: Polígonos Equidecomponíveis" required
+                        class="w-full border border-gray-300 rounded-md p-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-700 mb-1">Turma</label>
+                    <input type="text" id="turma" placeholder="Ex: 5º Ano A" required
+                        class="w-full border border-gray-300 rounded-md p-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm text-gray-700 mb-1">Data da Aula</label>
+                    <input type="date" id="dataAula" required
+                        class="w-full border border-gray-300 rounded-md p-2.5 text-gray-700 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-700 mb-1">Anexo do Planejamento (Máx 700KB)</label>
+                    <input type="file" id="anexo" accept=".pdf, image/*" required
+                        class="w-full border border-gray-300 rounded-md p-1.5 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Observações / Habilidades BNCC</label>
+                <textarea id="observacoes" rows="2" placeholder="Ex: Habilidade EF05MA09, utilizar Material Dourado..." required
+                    class="w-full border border-gray-300 rounded-md p-2.5 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button type="submit" id="btnSalvar"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-6 rounded-md transition duration-200 flex items-center gap-2">
+                    <span id="btnText">Guardar Planejamento</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bloco 2: Tabela de Histórico -->
+    <div class="bg-white w-full max-w-5xl rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-100">
+            <h2 class="text-xl font-semibold text-gray-800">Planejamentos Salvos</h2>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse" style="table-layout: fixed;">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs font-semibold tracking-wide uppercase">
+                        <th class="p-4 w-1/4">Assunto</th>
+                        <th class="p-4 w-32">Turma</th>
+                        <th class="p-4 w-32">Data</th>
+                        <th class="p-4">Observações</th>
+                        <th class="p-4 w-32">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPlanejamentos" class="text-gray-700 text-sm divide-y divide-gray-100">
+                    <!-- Linhas geradas via JavaScript -->
+                </tbody>
+            </table>
+            <div id="msgVazio" class="hidden p-6 text-center text-gray-500 text-sm">
+                Nenhum planejamento registrado ainda.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Link atualizado do seu Apps Script
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwTQffJdTcBgnxJuOOHOVajLPBvHpzZBEazC8V6KgoMCxYjDKnL-voRFOrEHPXWDOuVxw/exec'; 
+
+        function formatarData(dataString) {
+            if(!dataString) return '';
+            const partes = dataString.split('-');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
+        function atualizarTabela() {
+            const tbody = document.getElementById('tabelaPlanejamentos');
+            const msgVazio = document.getElementById('msgVazio');
+            
+            // Chave exclusiva para os planejamentos
+            const planejamentos = JSON.parse(localStorage.getItem('historicoPlanejamentos')) || [];
+            
+            tbody.innerHTML = '';
+            
+            if (planejamentos.length === 0) {
+                msgVazio.classList.remove('hidden');
+            } else {
+                msgVazio.classList.add('hidden');
+                
+                planejamentos.slice().reverse().forEach(plan => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-gray-50 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-4 font-medium text-gray-900 truncate" title="${plan.assunto}">${plan.assunto}</td>
+                        <td class="p-4 text-gray-600">${plan.turma}</td>
+                        <td class="p-4">
+                            <span class="bg-gray-50 border border-gray-200 px-2 py-1 rounded-md text-xs text-gray-600">
+                                ${formatarData(plan.dataAula)}
+                            </span>
+                        </td>
+                        <td class="p-4 text-gray-600" style="word-break: break-word; white-space: normal;">
+                            ${plan.observacoes}
+                        </td>
+                        <td class="p-4">
+                            <a href="${plan.linkDrive}" target="_blank" 
+                               class="inline-block bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 px-3 py-1.5 rounded-md text-sm font-medium transition-colors">
+                                Ver Anexo
+                            </a>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        atualizarTabela();
+
+        document.getElementById('formPlanejamento').addEventListener('submit', function (e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('anexo');
+            const file = fileInput.files[0];
+            const btn = document.getElementById('btnSalvar');
+            const btnText = document.getElementById('btnText');
+
+            if (!file) return;
+
+            if (file.size > 700 * 1024) {
+                alert('O arquivo excede o limite de 700KB. Por favor, comprima a imagem ou PDF.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.classList.replace('bg-indigo-600', 'bg-indigo-400');
+            btnText.innerText = 'Enviando para o Drive...';
+
+            const reader = new FileReader();
+            reader.onload = function () {
+                const base64Data = reader.result.split(',')[1]; 
+                
+                const payload = {
+                    assunto: document.getElementById('assunto').value,
+                    turma: document.getElementById('turma').value,
+                    dataAula: document.getElementById('dataAula').value,
+                    observacoes: document.getElementById('observacoes').value,
+                    fileName: file.name,
+                    mimeType: file.type,
+                    fileData: base64Data
+                };
+
+                fetch(scriptURL, {
+                    method: 'POST',
+                    redirect: 'follow', 
+                    body: JSON.stringify(payload)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if(result.status === 'sucesso') {
+                        const planosSalvos = JSON.parse(localStorage.getItem('historicoPlanejamentos')) || [];
+                        planosSalvos.push({
+                            assunto: payload.assunto,
+                            turma: payload.turma,
+                            dataAula: payload.dataAula,
+                            observacoes: payload.observacoes,
+                            linkDrive: result.url 
+                        });
+                        localStorage.setItem('historicoPlanejamentos', JSON.stringify(planosSalvos));
+                        
+                        atualizarTabela();
+
+                        alert('Planejamento salvo com sucesso!');
+                        document.getElementById('formPlanejamento').reset();
+                    } else {
+                        alert('Erro ao salvar: ' + result.mensagem);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    alert('Houve um erro na comunicação. Verifique a conexão.');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.classList.replace('bg-indigo-400', 'bg-indigo-600');
+                    btnText.innerText = 'Guardar Planejamento';
+                });
+            };
+            
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
